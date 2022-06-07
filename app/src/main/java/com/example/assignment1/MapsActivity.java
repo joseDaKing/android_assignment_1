@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -15,14 +16,23 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.example.assignment1.databinding.ActivityMapsBinding;
 
+import java.io.IOException;
+
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
     private ActivityMapsBinding binding;
+    private Client client;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        try {
+            client = new Client();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         binding = ActivityMapsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
@@ -52,12 +62,35 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-        mMap.getUiSettings().setZoomControlsEnabled(true);
-        mMap.getUiSettings().setZoomGesturesEnabled(true);
-        // Add a marker in Sydney and move the camera
-        LatLng sydney = new LatLng(-34, 151);
-        mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
 
+        mMap.getUiSettings().setZoomControlsEnabled(true);
+
+        mMap.getUiSettings().setZoomGesturesEnabled(true);
+
+        if (client != null) {
+
+            client.onException = (String message) -> {
+
+                Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show();
+            };
+
+            client.onLocations = (UserPosition[] positions) -> {
+
+                mMap.clear();
+
+                for (int i = 0; i < positions.length; i++) {
+
+                    UserPosition position = positions[i];
+
+                    MarkerOptions options = new MarkerOptions().position(position.getLatLng()).title(position.getName());
+
+                    mMap.addMarker(options);
+                }
+            };
+
+            client.onGroups = (String[] allAvailableGroups) -> {
+
+            };
+        }
     }
 }

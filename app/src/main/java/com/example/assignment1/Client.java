@@ -87,11 +87,11 @@ public class Client implements Runnable {
 
     public Callback<String> onException;
 
-    public Callback<String[]> onMembersResponse;
+    public Callback<String[]> onMembers;
 
-    public Callback<String[]> onGroupsResponse;
+    public Callback<String[]> onGroups;
 
-    public Callback<UserPosition[]> onLocationsResponse;
+    public Callback<UserPosition[]> onLocations;
 
 
 
@@ -106,19 +106,19 @@ public class Client implements Runnable {
 
             case Client.MEMBERS_TYPE:
 
-                handleMembersResponse(request, this.onMembersResponse);
+                handleMembersResponse(request, this.onMembers);
 
                 break;
 
             case Client.GROUPS_TYPE:
 
-                handleGroupsResponse(request, this.onGroupsResponse);
+                handleGroupsResponse(request, this.onGroups);
 
                 break;
 
             case Client.LOCATIONS_TYPE:
 
-                handleLocationsResponse(request, this.onLocationsResponse);
+                handleLocationsResponse(request, this.onLocations);
 
                 break;
         }
