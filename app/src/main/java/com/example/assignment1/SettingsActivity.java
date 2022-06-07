@@ -2,6 +2,7 @@ package com.example.assignment1;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -29,6 +30,16 @@ public class SettingsActivity extends AppCompatActivity {
         setContentView(R.layout.activity_settings);
 
         initiateVars();
+
+     /*   Intent intent = getIntent();
+        Client client = (Client) intent.getSerializableExtra("Client");
+
+        client.onGroups = (String[] allAvailableGroups) -> {
+
+            ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, androidx.appcompat.R.layout.support_simple_spinner_dropdown_item, allAvailableGroups);
+
+            selectGroup.setAdapter(adapter);
+        };*/
 
         String [] dummyEx = new String[]{"Välj grupp", "Grupp1", "Grupp2", "Grupp3" };
 

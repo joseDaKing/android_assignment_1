@@ -4,6 +4,8 @@ import androidx.fragment.app.FragmentActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.StrictMode;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
@@ -15,8 +17,11 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.example.assignment1.databinding.ActivityMapsBinding;
+import java.util.concurrent.Executor;
+import org.json.JSONException;
 
 import java.io.IOException;
+import java.util.concurrent.Executors;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
@@ -28,11 +33,26 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        try {
-            client = new Client();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+
+                    client = new Client();
+                    client.start();
+                    client.addRequest(Client.createRegistrationRequest("Samis Group", "Sami"));
+
+                    Intent intent = new Intent(getApplicationContext(), SettingsActivity.class);
+                    intent.putExtra("Client", client);
+                   // startActivity(intent);
+
+                } catch (IOException | JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        thread.start();
 
         binding = ActivityMapsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
@@ -86,10 +106,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                     mMap.addMarker(options);
                 }
-            };
-
-            client.onGroups = (String[] allAvailableGroups) -> {
-
             };
         }
     }

@@ -1,5 +1,7 @@
 package com.example.assignment1;
 
+import android.util.Log;
+
 import com.google.android.gms.maps.model.LatLng;
 
 import org.json.JSONArray;
@@ -11,6 +13,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.net.Socket;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -19,7 +22,7 @@ interface Callback<T> {
     void call(T value);
 }
 
-public class Client implements Runnable {
+public class Client extends Thread implements Serializable {
 
     private static final String REGISTER_TYPE = "register";
 
@@ -239,19 +242,23 @@ public class Client implements Runnable {
         requestQue.add(request);
     }
 
-    public void terminate() {
+    public void terminate() throws IOException {
 
         isTerminating = true;
+        socket.close();
     }
 
     @Override
     public void run() {
+
+        Log.d("Sami och yousef testing", "Sami testing 2000");
 
         while(true) {
 
             if (requestQue.size() != 0) {
 
                 JSONObject request = requestQue.poll();
+
 
                 try {
 
@@ -265,20 +272,21 @@ public class Client implements Runnable {
                     e.printStackTrace();
                 }
 
-                try {
+            }
 
-                    String jsonString = dataInputStream.readUTF();
+            try {
 
-                    JSONObject response = new JSONObject(jsonString);
+                String jsonString = dataInputStream.readUTF();
 
-                    String type = response.getString("type");
+                JSONObject response = new JSONObject(jsonString);
 
-                    handleRequest(type, response);
+                String type = response.getString("type");
 
-                }
-                catch (IOException | JSONException e) {
-                    e.printStackTrace();
-                }
+                handleRequest(type, response);
+
+            }
+            catch (IOException | JSONException e) {
+                e.printStackTrace();
             }
 
             if (isTerminating) {
