@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_groups"
+        android:icon="@drawable/groups"
+        android:title="Groups"
+        />
+    <item
+        android:id="@+id/nav_user"
+        android:icon="@drawable/user"
+        android:title="Add User"
+        />
+
+</menu>
