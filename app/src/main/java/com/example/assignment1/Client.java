@@ -1,16 +1,10 @@
 package com.example.assignment1;
 
+import com.google.android.gms.maps.model.LatLng;
 
-import com.example.assignment1.messages.CurrentGroupsRequest;
-import com.example.assignment1.messages.CurrentGroupsResponse;
-import com.example.assignment1.messages.DeregistrationRequest;
-import com.example.assignment1.messages.MembersInAGroupRequest;
-import com.example.assignment1.messages.MembersInAGroupResponse;
-import com.example.assignment1.messages.RegistrationRequest;
-import com.example.assignment1.messages.RegistrationResponse;
-import com.example.assignment1.messages.SetPositionRequest;
-
+import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -18,184 +12,278 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
-import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.Queue;
 
-public class Client extends Thread {
+interface Callback<T> {
+    void call(T value);
+}
 
-    private final String ipAddress;
+public class Client implements Runnable {
 
-    private final String port;
+    private static final String REGISTER_TYPE = "register";
 
-    private ArrayList<IChangeListener<String[]>> onGroups = new ArrayList<>();
+    private static final String MEMBERS_TYPE = "members";
 
-    private ArrayList<OnGroupMember> onGroupMembers = new ArrayList<OnGroupMember>();
+    private static final String GROUPS_TYPE = "groups";
+
+    private static final String LOCATION_TYPE = "location";
+
+    private static final String LOCATIONS_TYPE = "locations";
+
+    private static final String EXCEPTIONS = "exception";
+
+
+
+    public static JSONObject createRegistrationRequest(String group, String member) throws JSONException {
+
+        JSONObject jsonObject = new JSONObject();
+
+        jsonObject.put("type", REGISTER_TYPE);
+
+        jsonObject.put("group", group);
+
+        jsonObject.put("member", member);
+
+        return jsonObject;
+    }
+
+    public static JSONObject createMembersInAGroupRequest(String group) throws JSONException {
+
+        JSONObject jsonObject = new JSONObject();
+
+        jsonObject.put("type", MEMBERS_TYPE);
+
+        jsonObject.put("group", group);
+
+        return jsonObject;
+    }
+
+    public static JSONObject createGetCurrentGroupsRequest() throws JSONException {
+
+        JSONObject jsonObject = new JSONObject();
+
+        jsonObject.put("type", GROUPS_TYPE);
+
+        return jsonObject;
+    }
+
+    public static JSONObject createSetPositionRequest(String id, String lon, String lat) throws JSONException {
+
+        JSONObject jsonObject = new JSONObject();
+
+        jsonObject.put("type", LOCATION_TYPE);
+
+        jsonObject.put("id", id);
+
+        jsonObject.put("longitude", lon);
+
+        jsonObject.put("latitude", lat);
+
+        return jsonObject;
+    }
+
+
+
+    public Callback<String> onException;
+
+    public Callback<String[]> onMembersResponse;
+
+    public Callback<String[]> onGroupsResponse;
+
+    public Callback<UserPosition[]> onLocationsResponse;
+
+
+
+    private void handleRequest(String type, JSONObject request) throws JSONException {
+
+        switch (type) {
+            case Client.EXCEPTIONS:
+
+                handleException(request, this.onException);
+
+                break;
+
+            case Client.MEMBERS_TYPE:
+
+                handleMembersResponse(request, this.onMembersResponse);
+
+                break;
+
+            case Client.GROUPS_TYPE:
+
+                handleGroupsResponse(request, this.onGroupsResponse);
+
+                break;
+
+            case Client.LOCATIONS_TYPE:
+
+                handleLocationsResponse(request, this.onLocationsResponse);
+
+                break;
+        }
+    }
+
+    private static void handleException(JSONObject request, Callback<String> cb) throws JSONException {
+
+        String message = request.getString("message");
+
+        if (cb != null) {
+
+            cb.call(message);
+        }
+    }
+
+    private static void handleMembersResponse(JSONObject request, Callback<String[]> cb) throws JSONException {
+
+        JSONArray jsonArray = request.getJSONArray("members");
+
+        String[] members = new String[jsonArray.length()];
+
+        for (int i = 0; i < jsonArray.length(); i++) {
+
+            JSONObject jsonObject = jsonArray.getJSONObject(i);
+
+            members[i] = jsonObject.getString("member");
+        }
+
+        if (cb != null) {
+
+            cb.call(members);
+        }
+    }
+
+    private static void handleGroupsResponse(JSONObject request, Callback<String[]> cb) throws JSONException {
+
+        JSONArray groupsJSON = request.getJSONArray("members");
+
+        String[] groupNames = new String[groupsJSON.length()];
+
+        for (int i = 0; i < groupsJSON.length(); i++) {
+
+            JSONObject jsonObject = groupsJSON.getJSONObject(i);
+
+            groupNames[i] = jsonObject.getString("group");
+        }
+
+        if (cb != null) {
+
+            cb.call(groupNames);
+        }
+    }
+
+    private static void handleLocationsResponse(JSONObject request, Callback<UserPosition[]> cb) throws JSONException {
+
+        JSONArray location = request.getJSONArray("location");
+
+        UserPosition[] users = new UserPosition[location.length()];
+
+        for (int i = 0; i < location.length(); i++) {
+
+            JSONObject user = location.getJSONObject(i);
+
+            String member = user.getString("member");
+
+            String longitude = user.getString("longitude");
+
+            String latitude = user.getString("latitude");
+
+            LatLng latLng = new LatLng(Integer.parseInt(longitude), Integer.parseInt(latitude));
+
+            users[i] = new UserPosition(member, latLng);
+        }
+
+        if (cb != null) {
+
+            cb.call(users);
+        }
+    }
+
+
+
+    private String  IP_ADDRESS = "195.178.227.53";
+
+    private int PORT_NUMBER = 7117;
+
+    private Socket socket;
+
+    private InputStream inputStream;
 
     private DataInputStream dataInputStream;
 
+    private OutputStream outputStream;
+
     private DataOutputStream dataOutputStream;
+
+
 
     private boolean isTerminating = false;
 
-    public Client(String ipAddress, String port) throws IOException {
+    private Queue<JSONObject> requestQue = new LinkedList<>();
 
-        this.ipAddress = ipAddress;
+    public Client() throws IOException {
 
-        this.port = port;
+        socket = new Socket(IP_ADDRESS, PORT_NUMBER);
 
-        Socket socket = new Socket(ipAddress, Integer.parseInt(port));
-
-        InputStream inputStream = socket.getInputStream();
+        inputStream = socket.getInputStream();
 
         dataInputStream = new DataInputStream(inputStream);
 
-        OutputStream outputStream = socket.getOutputStream();
+        outputStream = socket.getOutputStream();
 
         dataOutputStream = new DataOutputStream(outputStream);
     }
 
-    public String register(RegistrationRequest request) {
+    public void addRequest(JSONObject request) {
 
-        String id = null;
-
-        try {
-            dataOutputStream.writeUTF(request.toString());
-
-            RegistrationResponse registrationResponse = new RegistrationResponse(dataInputStream.readUTF());
-
-            id = registrationResponse.value();
-        }
-        catch (IOException | JSONException e) {
-            e.printStackTrace();
-        }
-
-        return id;
-    }
-
-    public void unregister(DeregistrationRequest request) {
-
-        try {
-            dataOutputStream.writeUTF(request.toString());
-            dataOutputStream.flush();
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void setPosition(SetPositionRequest request) {
-
-        try {
-            dataOutputStream.writeUTF(request.toString());
-            dataOutputStream.flush();
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private String[] getAllGroups() throws JSONException {
-
-        CurrentGroupsResponse response = null;
-
-        try {
-            dataOutputStream.writeUTF(new CurrentGroupsRequest().toString());
-            dataOutputStream.flush();
-            response = new CurrentGroupsResponse(dataInputStream.readUTF());
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return response.value();
-    }
-
-    private String[] getGroupMembers(MembersInAGroupRequest request) throws JSONException {
-
-        MembersInAGroupResponse response = null;
-
-        try {
-            dataOutputStream.writeUTF(request.toString());
-            dataOutputStream.flush();
-            response = new MembersInAGroupResponse(dataInputStream.readUTF());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return response.value();
-    }
-
-    public void onGroups(IChangeListener<String[]> listener) {
-
-        onGroups.add(listener);
-    }
-
-    private void executeOnGroups(String[] groupNames) {
-
-        for (int i = 0; i < onGroups.size(); i++) {
-
-            IChangeListener<String[]> listener = onGroups.get(i);
-
-            if (listener != null) {
-
-                listener.changeListener(groupNames);
-            }
-        }
-    }
-
-    public void onGroupMembers(String group, IChangeListener<String[]> listener) {
-
-        onGroupMembers.add(new OnGroupMember(group, listener));
+        requestQue.add(request);
     }
 
     public void terminate() {
 
-        if (!isTerminating) {
-
-            isTerminating = true;
-        }
-
-        onGroups.clear();
-
-        onGroupMembers.clear();
+        isTerminating = true;
     }
 
+    @Override
     public void run() {
 
-        while(!isTerminating) {
+        while(true) {
 
-            try {
-                executeOnGroups(getAllGroups());
-            }
-            catch (JSONException e) {
-                e.printStackTrace();
-            }
+            if (requestQue.size() != 0) {
 
-
-
-            // Executing the onGroupMembers listeners
-            for (int i = 0; i < onGroupMembers.size(); i++) {
-
-                OnGroupMember onGroupMember = onGroupMembers.get(i);
-
-                String name = onGroupMember.getName();
+                JSONObject request = requestQue.poll();
 
                 try {
-                    String[] members = getGroupMembers(new MembersInAGroupRequest(name));
 
-                    onGroupMember.getListener().changeListener(members);
+                    dataOutputStream.writeUTF(request.toString());
+
+                    dataOutputStream.flush();
+
                 }
-                catch (JSONException e) {
+                catch (IOException e) {
+
+                    e.printStackTrace();
+                }
+
+                try {
+
+                    String jsonString = dataInputStream.readUTF();
+
+                    JSONObject response = new JSONObject(jsonString);
+
+                    String type = response.getString("type");
+
+                    handleRequest(type, response);
+
+                }
+                catch (IOException | JSONException e) {
                     e.printStackTrace();
                 }
             }
 
+            if (isTerminating) {
 
-
-            try {
-                Thread.sleep(250);
-            }
-            catch (InterruptedException e) {
-                e.printStackTrace();
+                break;
             }
         }
     }
