@@ -170,8 +170,6 @@ public class Client extends Thread {
                 e.printStackTrace();
             }
 
-
-
             // Executing the onGroupMembers listeners
             for (int i = 0; i < onGroupMembers.size(); i++) {
 
@@ -188,8 +186,6 @@ public class Client extends Thread {
                     e.printStackTrace();
                 }
             }
-
-
 
             try {
                 Thread.sleep(250);
