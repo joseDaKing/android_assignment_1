@@ -2,7 +2,9 @@ package com.example.assignment1;
 
 import com.google.android.gms.maps.model.LatLng;
 
-public class UserPosition {
+import java.io.Serializable;
+
+public class UserPosition implements Serializable {
 
     private String name;
 

@@ -6,33 +6,23 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
-import android.widget.Toast;
 
-import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.MarkerOptions;
 import com.example.assignment1.databinding.ActivityMapsBinding;
 
-import java.io.IOException;
+import org.json.JSONException;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
     private ActivityMapsBinding binding;
-    private Client client;
+    private Intent clientIntent;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        try {
-            client = new Client();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
         binding = ActivityMapsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
@@ -47,7 +37,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
+
         mapFragment.getMapAsync(this);
+
+        clientIntent = new Intent(this, ClientService.class);
+
+        startService(clientIntent);
+
+        try {
+            clientIntent.putExtra(
+                ClientManager.RECEIVE_TYPE,
+                ClientManager.createRegistrationRequest("asdad", "adsad")
+            );
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -67,30 +71,5 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         mMap.getUiSettings().setZoomGesturesEnabled(true);
 
-        if (client != null) {
-
-            client.onException = (String message) -> {
-
-                Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show();
-            };
-
-            client.onLocations = (UserPosition[] positions) -> {
-
-                mMap.clear();
-
-                for (int i = 0; i < positions.length; i++) {
-
-                    UserPosition position = positions[i];
-
-                    MarkerOptions options = new MarkerOptions().position(position.getLatLng()).title(position.getName());
-
-                    mMap.addMarker(options);
-                }
-            };
-
-            client.onGroups = (String[] allAvailableGroups) -> {
-
-            };
-        }
     }
 }
