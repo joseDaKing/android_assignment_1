@@ -1,58 +1,27 @@
 package com.example.assignment1;
 
 import androidx.fragment.app.FragmentActivity;
-
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.StrictMode;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.Toast;
-
-import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.MarkerOptions;
 import com.example.assignment1.databinding.ActivityMapsBinding;
-import java.util.concurrent.Executor;
+
 import org.json.JSONException;
 
-import java.io.IOException;
-import java.util.concurrent.Executors;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
     private ActivityMapsBinding binding;
-    private Client client;
+    private Intent clientIntent;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        Thread thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-
-                    client = new Client();
-                    client.start();
-                    client.addRequest(Client.createRegistrationRequest("Samis Group", "Sami"));
-
-                    Intent intent = new Intent(getApplicationContext(), SettingsActivity.class);
-                    intent.putExtra("Client", client);
-                   // startActivity(intent);
-
-                } catch (IOException | JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-
-        thread.start();
 
         binding = ActivityMapsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
@@ -64,10 +33,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 startActivity(new Intent(MapsActivity.this, SettingsActivity.class));
             }
         });
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
+        clientIntent = new Intent(this, ClientService.class);
+        startService(clientIntent);
+
+
+        try {
+            clientIntent.putExtra(ClientManager.RECEIVE_TYPE, ClientManager.createRegistrationRequest("Sami Group", "Yousef"));
+            
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
     }
 
     /**
@@ -87,26 +68,5 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         mMap.getUiSettings().setZoomGesturesEnabled(true);
 
-        if (client != null) {
-
-            client.onException = (String message) -> {
-
-                Toast.makeText(MapsActivity.this, message, Toast.LENGTH_SHORT).show();
-            };
-
-            client.onLocations = (UserPosition[] positions) -> {
-
-                mMap.clear();
-
-                for (int i = 0; i < positions.length; i++) {
-
-                    UserPosition position = positions[i];
-
-                    MarkerOptions options = new MarkerOptions().position(position.getLatLng()).title(position.getName());
-
-                    mMap.addMarker(options);
-                }
-            };
-        }
     }
 }
