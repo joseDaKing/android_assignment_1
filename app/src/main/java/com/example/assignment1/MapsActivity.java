@@ -4,15 +4,23 @@ import androidx.fragment.app.FragmentActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.example.assignment1.databinding.ActivityMapsBinding;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 
 import org.json.JSONException;
+
+import java.io.Serializable;
+
+
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
@@ -44,14 +52,47 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         startService(clientIntent);
 
-        try {
-            clientIntent.putExtra(
-                ClientManager.RECEIVE_TYPE,
-                ClientManager.createRegistrationRequest("asdad", "adsad")
-            );
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
+        addListeners();
+    }
+
+    private void addListeners() {
+
+        Callback<UserPosition[]> onLocation = userPositions -> {
+
+            mMap.clear();
+
+            for (int i = 0; i < userPositions.length; i++) {
+
+                UserPosition userPosition = userPositions[i];
+
+                MarkerOptions options = new MarkerOptions();
+
+                options.title(options.getTitle());
+
+                options.position(userPosition.getLatLng());
+
+                mMap.addMarker(options);
+            }
+        };
+
+        clientIntent.putExtra(
+                ClientManager.LOCATION_TYPE,
+                onLocation
+        );
+
+        Callback<String> onError = errorMessage -> {
+
+            CharSequence text = errorMessage;
+
+            Toast toast = Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT);
+
+            toast.show();
+        };
+
+        clientIntent.putExtra(
+                ClientManager.EXCEPTIONS_TYPE,
+                onError
+        );
     }
 
     /**

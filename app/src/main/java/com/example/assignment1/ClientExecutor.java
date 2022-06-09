@@ -58,6 +58,13 @@ public class ClientExecutor implements Runnable {
         String message = request.getString("message");
 
         this.intent.putExtra(ClientManager.EXCEPTIONS_TYPE, message);
+
+        Callback<String> callback = (Callback<String>)intent.getSerializableExtra(ClientManager.EXCEPTIONS_TYPE);
+
+        if (callback != null) {
+
+            callback.call(message);
+        }
     }
 
     private void handleMembersResponse(JSONObject request) throws JSONException {
@@ -73,7 +80,12 @@ public class ClientExecutor implements Runnable {
             members[i] = jsonObject.getString("member");
         }
 
-        this.intent.putExtra(ClientManager.MEMBERS_TYPE, members);
+        Callback<String[]> callback = (Callback<String[]>)intent.getSerializableExtra(ClientManager.MEMBERS_TYPE);
+
+        if (callback != null) {
+
+            callback.call(members);
+        }
     }
 
     private void handleGroupsResponse(JSONObject request) throws JSONException {
@@ -89,7 +101,12 @@ public class ClientExecutor implements Runnable {
             groupNames[i] = jsonObject.getString("group");
         }
 
-        this.intent.putExtra(ClientManager.GROUPS_TYPE, groupNames);
+        Callback<String[]> callback = (Callback<String[]>)intent.getSerializableExtra(ClientManager.GROUPS_TYPE);
+
+        if (callback != null) {
+
+            callback.call(groupNames);
+        }
     }
 
     private void handleLocationsResponse(JSONObject request) throws JSONException {
@@ -113,7 +130,12 @@ public class ClientExecutor implements Runnable {
             users[i] = new UserPosition(member, latLng);
         }
 
-        intent.putExtra(ClientManager.LOCATIONS_TYPE, users);
+        Callback<UserPosition[]> callback = (Callback<UserPosition[]>)intent.getSerializableExtra(ClientManager.LOCATIONS_TYPE);
+
+        if (callback != null) {
+
+            callback.call(users);
+        }
     }
 
     public void run() {

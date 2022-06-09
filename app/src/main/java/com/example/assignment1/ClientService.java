@@ -24,6 +24,7 @@ public class ClientService extends Service {
 
     private class LocalBinder extends Binder {
         public ClientService getService() {
+
             return ClientService.this;
         }
     }

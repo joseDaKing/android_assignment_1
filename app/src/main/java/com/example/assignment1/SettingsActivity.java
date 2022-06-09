@@ -2,6 +2,7 @@ package com.example.assignment1;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -12,7 +13,15 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
 
+import com.google.android.gms.maps.model.MarkerOptions;
+
+import org.json.JSONException;
+
+import java.util.ArrayList;
+
 public class SettingsActivity extends AppCompatActivity {
+
+    private ArrayList<String> list = new ArrayList<>();
 
     private EditText edtUserName, edtFirstName, edtLastName, edtGroupName;
 
@@ -20,8 +29,13 @@ public class SettingsActivity extends AppCompatActivity {
 
     private Spinner selectGroup;
 
+    private Intent clientIntent;
 
     private String groupName = "";
+
+    private String finalGroupName;
+
+    private ArrayAdapter<String> adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,9 +44,7 @@ public class SettingsActivity extends AppCompatActivity {
 
         initiateVars();
 
-        String [] dummyEx = new String[]{"Välj grupp", "Grupp1", "Grupp2", "Grupp3" };
-
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, androidx.appcompat.R.layout.support_simple_spinner_dropdown_item, dummyEx);
+        adapter = new ArrayAdapter<String>(this, androidx.appcompat.R.layout.support_simple_spinner_dropdown_item, list);
 
         selectGroup.setAdapter(adapter);
 
@@ -52,6 +64,12 @@ public class SettingsActivity extends AppCompatActivity {
         createUserListener();
 
         createOrChooseGroup();
+
+        clientIntent = new Intent(this, ClientService.class);
+
+        startService(clientIntent);
+
+        addListeners();
     }
 
     private void initiateVars(){
@@ -64,6 +82,39 @@ public class SettingsActivity extends AppCompatActivity {
         btnAddGroup = findViewById(R.id.btn_group);
     }
 
+    private void addListeners() {
+
+        Callback<String[]> onGroups = groupNames -> {
+
+            list.clear();
+
+            for (String item : groupNames) {
+
+                list.add(item);
+            }
+
+            adapter.notify();
+        };
+
+        clientIntent.putExtra(
+                ClientManager.GROUPS_TYPE,
+                onGroups
+        );
+
+        Callback<String> onError = errorMessage -> {
+
+            CharSequence text = errorMessage;
+
+            Toast toast = Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT);
+
+            toast.show();
+        };
+
+        clientIntent.putExtra(
+                ClientManager.EXCEPTIONS_TYPE,
+                onError
+        );
+    }
 
     private void createUserListener() {
 
@@ -79,12 +130,23 @@ public class SettingsActivity extends AppCompatActivity {
                String username = edtUserName.getText().toString();
                String firstName = edtFirstName.getText().toString();
                String lastName = edtLastName.getText().toString();
+
+                try {
+                    clientIntent.putExtra(
+                        ClientManager.MEMBERS_TYPE,
+                        ClientManager.createRegistrationRequest(
+                            groupName,
+                            username + "-" + firstName + "-" + lastName
+                        )
+                    );
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
             }
         });
     }
 
     private void createOrChooseGroup() {
-
 
         btnAddGroup.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -101,10 +163,16 @@ public class SettingsActivity extends AppCompatActivity {
 
                 if(isCreatingANewGroup){
 
+                    finalGroupName = edtGroupName.getText().toString();
+
+                    return;
                 }
 
                 else if(hasSelectedGroup) {
 
+                    finalGroupName = groupName;
+
+                    return;
                 }
             }
         });
