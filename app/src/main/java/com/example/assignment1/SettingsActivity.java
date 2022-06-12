@@ -1,7 +1,9 @@
 package com.example.assignment1;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.ViewModelProvider;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
@@ -12,14 +14,13 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
-
-import com.google.android.gms.maps.model.MarkerOptions;
-
-import org.json.JSONException;
+import com.example.assignment1.client.ClientService;
 
 import java.util.ArrayList;
 
 public class SettingsActivity extends AppCompatActivity {
+
+    private AppViewModel mapsActivityAppViewModel;
 
     private ArrayList<String> list = new ArrayList<>();
 
@@ -37,9 +38,15 @@ public class SettingsActivity extends AppCompatActivity {
 
     private ArrayAdapter<String> adapter;
 
+    private AppViewModel appViewModel;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
         super.onCreate(savedInstanceState);
+
+        mapsActivityAppViewModel = new ViewModelProvider(this).get(AppViewModel.class);
+
         setContentView(R.layout.activity_settings);
 
         initiateVars();
@@ -68,8 +75,6 @@ public class SettingsActivity extends AppCompatActivity {
         clientIntent = new Intent(this, ClientService.class);
 
         startService(clientIntent);
-
-        addListeners();
     }
 
     private void initiateVars(){
@@ -80,40 +85,6 @@ public class SettingsActivity extends AppCompatActivity {
         edtGroupName = findViewById(R.id.group_name);
         selectGroup = findViewById(R.id.group_spinner);
         btnAddGroup = findViewById(R.id.btn_group);
-    }
-
-    private void addListeners() {
-
-        Callback<String[]> onGroups = groupNames -> {
-
-            list.clear();
-
-            for (String item : groupNames) {
-
-                list.add(item);
-            }
-
-            adapter.notify();
-        };
-
-        clientIntent.putExtra(
-                ClientManager.GROUPS_TYPE,
-                onGroups
-        );
-
-        Callback<String> onError = errorMessage -> {
-
-            CharSequence text = errorMessage;
-
-            Toast toast = Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT);
-
-            toast.show();
-        };
-
-        clientIntent.putExtra(
-                ClientManager.EXCEPTIONS_TYPE,
-                onError
-        );
     }
 
     private void createUserListener() {
@@ -130,18 +101,6 @@ public class SettingsActivity extends AppCompatActivity {
                String username = edtUserName.getText().toString();
                String firstName = edtFirstName.getText().toString();
                String lastName = edtLastName.getText().toString();
-
-                try {
-                    clientIntent.putExtra(
-                        ClientManager.MEMBERS_TYPE,
-                        ClientManager.createRegistrationRequest(
-                            groupName,
-                            username + "-" + firstName + "-" + lastName
-                        )
-                    );
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
             }
         });
     }
@@ -178,4 +137,33 @@ public class SettingsActivity extends AppCompatActivity {
         });
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        startService();
+    }
+
+    @Override
+    protected void onStop() {
+
+        super.onStop();
+
+        unbindService(mapsActivityAppViewModel.getClientServiceConnection());
+    }
+
+    private void startService(){
+
+        Intent serviceIntent = new Intent(this, ClientService.class);
+
+        startService(serviceIntent);
+
+        bindService();
+    }
+
+    private void bindService(){
+
+        Intent serviceBindIntent =  new Intent(this, ClientService.class);
+
+        bindService(serviceBindIntent, mapsActivityAppViewModel.getClientServiceConnection(), Context.BIND_AUTO_CREATE);
+    }
 }
